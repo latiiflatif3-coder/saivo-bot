@@ -7,6 +7,7 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "express": "^latest",
     "groq-sdk": "^latest",
     "telegraf": "^latest"
   }
