@@ -1,5 +1,6 @@
 import { Telegraf } from 'telegraf';
 import Groq from 'groq-sdk';
+import express from 'express';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 if (!TELEGRAM_TOKEN) {
@@ -9,6 +10,18 @@ if (!TELEGRAM_TOKEN) {
 
 const bot = new Telegraf(TELEGRAM_TOKEN);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+// إعداد خادم Express لإبقاء المنفذ (Port) مفتوحاً دائماً وترضاء منصة Railway
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('Saivo Bot is active and running 24/7! 🚀');
+});
+
+app.listen(PORT, () => {
+    console.log(`Web server is listening on port ${PORT}`);
+});
 
 // ذاكرة مؤقتة للمحادثات
 const memory = {};
@@ -101,7 +114,7 @@ bot.on('text', async (ctx) => {
 
 // إطلاق البوت
 bot.launch().then(() => {
-    console.log('Saivo Bot is running successfully!');
+    console.log('Saivo Telegram Bot is running successfully alongside Express!');
 }).catch(err => {
     console.error('Failed to launch bot:', err);
 });
