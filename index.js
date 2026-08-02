@@ -55,26 +55,29 @@ bot.on('text', async (ctx) => {
         const history = db[userId].history;
         history.push({ role: "user", content: userMessage });
 
+        // تقليص الذاكرة المؤقتة لآخر 6 رسائل لتجنب تجاوز الحد الأقصى للرموز
+        const recentHistory = history.slice(-6);
+
         const messages = [
             { role: "system", content: systemInstruction },
-            ...history.map(h => ({ role: h.role, content: h.content }))
+            ...recentHistory.map(h => ({ role: h.role, content: h.content }))
         ];
 
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: "llama-3.3-70b-versatile",
-            max_tokens: 80,
+            max_tokens: 150,
             temperature: 0.7,
         });
 
-        const replyText = completion.choices[0]?.message?.content || "معاك..";
+        const replyText = completion.choices[0]?.message?.content || "موافق.. شنو كاين؟ ✨";
         history.push({ role: "assistant", content: replyText });
         saveConversations(db);
 
         await ctx.reply(replyText);
     } catch (error) {
-        console.error('خطأ:', error);
-        await ctx.reply('معاك.. قل لي شنو كاين؟ 🤍');
+        console.error('خطأ تفصيلي:', error);
+        await ctx.reply('عاود صياغة رسالتك عافاك، أنا معك 🤍');
     }
 });
 
