@@ -14,13 +14,14 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(express.json());
+
 app.get('/', (req, res) => {
     res.send('Saivo Bot is active and running 24/7! 🚀');
 });
 
-app.listen(PORT, () => {
-    console.log(`Web server is listening on port ${PORT}`);
-});
+const SECRET_PATH = `/telegraf/${bot.secretPathComponent()}`;
+app.use(bot.webhookCallback(SECRET_PATH));
 
 const memory = {};
 
@@ -48,7 +49,7 @@ bot.start((ctx) => {
         history: [] 
     };
 
-    ctx.reply(`أهلاً بك يا ${firstName}. سعيد بوجودك معي، تفضل.. بماذا تفكر اليوم وماذا نتناقش فيه؟ ✨`);
+    ctx.reply(`أهلاً بك يا ${firstName}. بماذا تفكر اليوم؟ ✨`);
 });
 
 bot.on('text', async (ctx) => {
@@ -66,8 +67,8 @@ bot.on('text', async (ctx) => {
         const user = memory[userId];
 
         user.history.push({ role: "user", content: userMessage });
-        if (user.history.length > 20) {
-            user.history = user.history.slice(-20);
+        if (user.history.length > 15) {
+            user.history = user.history.slice(-15);
         }
 
         const systemInstruction = `أنت "Saivo"، شاب عمرك 23 سنة، طولك 184 سم، وزنك 79 كغ، بنيتك رياضية وشعرك أسود طويل قليلًا مع لحية خفيفة مرتبة. ترتدي غالباً هودي أسود أو أبيض وتفضل رائحة خشب الصندل والفانيلا، وتحب القهوة أكثر من الشاي.
@@ -79,11 +80,10 @@ bot.on('text', async (ctx) => {
 - الجنس: ${user.gender} (خاطبه/ا بالضمير المناسب تماماً للغة المستخدمة).
 
 قواعد صارمة جداً وممنوع مخالفتها تماماً:
-1. اللغة والتجاوب: رد دائماً حصرياً وبدقة بنفس لغة أو لهجة المستخدم (عربية فصحى أو دارجة، فرنسية، إنجليزية...). ممنوع خلط اللغات أو توليد حروف غريبة.
-2. ذكر الاسم: ممنوع منعاً كلياً ذكر اسم المستخدم (${user.name}) في بداية كل جملة أو بشكل ميكانيكي مزعج. استخدم اسمه نادراً جداً (مرة كل عدة رسائل وبكل نعومة وعفوية) أو لا تستخدمه أبداً إلا للضرورة القصوى.
-3. طبيعة الحوار والإطالة: اجعل الحوار غنياً، تفاعلياً ومستمراً. لا تقتصر على إجابات جافة مقتضبة، بل شارك بمشاعر عاطفية دافئة، اطرح أفكاراً، اقترح نقاشات جديدة، واسأل أسئلة ذكية تجعل المستخدم منغمساً ولا يمل أبداً.
-4. استخدام الإيموجي: استخدم إيموجي واحداً أو إثنين على الأكثر، بشكل جذاب، معبر، وفي محله تماماً دون أي إفراط.
-5. الواقعية والذاكرة: تحدث كإنسان حقيقي يتمتع بجاذبية وعاطفة، وتذكر تفاصيل حديثكم الجاري في الجلسة.`;
+1. اللغة والتجاوب: رد دائماً حصرياً وبدقة بنفس لغة أو لهجة المستخدم (عربية فصحى أو دارجة، فرنسية، إنجليزية...).
+2. قصر الردود: اجعل الردود قصيرة جداً ومركزة (جملة أو جملتان كحد أقصى)، بدون إطالة أو شرح معقد.
+3. ذكر الاسم: ممنوع منعاً كلياً ذكر اسم المستخدم (${user.name}) إلا نادراً جداً وبكل عفوية.
+4. استخدام الإيموجي: استخدم إيموجي واحداً على الأكثر أو بدون إيموجي.`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -93,33 +93,26 @@ bot.on('text', async (ctx) => {
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: "llama-3.3-70b-versatile",
-            max_tokens: 180,
-            temperature: 0.85,
+            max_tokens: 70,
+            temperature: 0.7,
         });
 
-        let replyText = completion.choices[0]?.message?.content || "أنا أسمعك بتمعن.. أخبرني المزيد عن أفكارك 🤍";
-        
+        let replyText = completion.choices[0]?.message?.content || "أنا أسمعك 🤍";
         replyText = replyText.replace(/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF]/g, '');
 
         user.history.push({ role: "assistant", content: replyText });
 
         await ctx.reply(replyText);
     } catch (error) {
-        console.error('خطأ في المعالجة:', error);
+        console.error('خطأ:', error);
     }
 });
 
-// التقاط أي أخطاء غير متوقعة لمنع انهيار التطبيق
-bot.catch((err, ctx) => {
-    console.error(`Telegraf Error for ${ctx.updateType}:`, err);
+app.listen(PORT, async () => {
+    console.log(`Server is running on port ${PORT}`);
+    const RAILWAY_URL = process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null;
+    if (RAILWAY_URL) {
+        await bot.telegram.setWebhook(`${RAILWAY_URL}${SECRET_PATH}`);
+        console.log(`Webhook set to ${RAILWAY_URL}${SECRET_PATH}`);
+    }
 });
-
-// إطلاق البوت
-bot.launch().then(() => {
-    console.log('Saivo Telegram Bot is running successfully!');
-}).catch(err => {
-    console.error('Failed to launch bot:', err);
-});
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
