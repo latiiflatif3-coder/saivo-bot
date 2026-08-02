@@ -11,17 +11,17 @@ if (!TELEGRAM_TOKEN) {
 const bot = new Telegraf(TELEGRAM_TOKEN);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+// خادم Express للحفاظ على حالة البوت شغالة 24/7 على Railway
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-app.use(express.json());
 
 app.get('/', (req, res) => {
     res.send('Saivo Bot is active and running 24/7! 🚀');
 });
 
-const SECRET_PATH = `/telegraf/${bot.secretPathComponent()}`;
-app.use(bot.webhookCallback(SECRET_PATH));
+app.listen(PORT, () => {
+    console.log(`Web server is listening on port ${PORT}`);
+});
 
 const memory = {};
 
@@ -108,11 +108,12 @@ bot.on('text', async (ctx) => {
     }
 });
 
-app.listen(PORT, async () => {
-    console.log(`Server is running on port ${PORT}`);
-    const RAILWAY_URL = process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null;
-    if (RAILWAY_URL) {
-        await bot.telegram.setWebhook(`${RAILWAY_URL}${SECRET_PATH}`);
-        console.log(`Webhook set to ${RAILWAY_URL}${SECRET_PATH}`);
-    }
+// تشغيل البوت بطريقة Long Polling المستقرة جنباً إلى جنب مع سيرفر Express
+bot.launch().then(() => {
+    console.log('Saivo Telegram Bot launched successfully via Polling!');
+}).catch(err => {
+    console.error('Failed to launch bot:', err);
 });
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
