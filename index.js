@@ -33,7 +33,6 @@ bot.start((ctx) => {
     const firstName = ctx.from.first_name || 'صديقي';
     const db = loadConversations();
     
-    // تسجيل الاسم مباشرة من تيليجرام وسؤال ذكي وخفيف عن الجنس فقط لمرة واحدة
     db[userId] = { 
         name: firstName, 
         gender: db[userId]?.gender || null, 
@@ -63,37 +62,37 @@ bot.on('text', async (ctx) => {
 
         const user = db[userId];
 
-        // إذا لم يكن الجنس محدد بعد، نعتبر الرسالة الحالية هي تحديد الجنس (ذكر/أنثى)
+        // تحديد الجنس إذا لم يكن مسجلاً
         if (!user.gender) {
             const msgLower = userMessage.toLowerCase();
-            if (msgLower.includes('ذكر') || msgLower.includes('رجل') || msgLower.includes('ولد')) {
+            if (msgLower.includes('ذكر') || msgLower.includes('رجل') || msgLower.includes('ولد') || msgLower.includes('homme') || msgLower.includes('boy')) {
                 user.gender = 'ذكر';
-            } else if (msgLower.includes('أنثى') || msgLower.includes('بنت') || msgLower.includes('امرأة')) {
+            } else if (msgLower.includes('أنثى') || msgLower.includes('بنت') || msgLower.includes('امرأة') || msgLower.includes('femme') || msgLower.includes('girl')) {
                 user.gender = 'أنثى';
             } else {
-                user.gender = 'ذكر'; // افتراضي
+                user.gender = 'ذكر';
             }
             saveConversations(db);
             return ctx.reply(`سعيد جداً بوجودك معي يا ${user.name}. قل لي، بماذا تفكر اليوم أو ماذا ترغب أن نتناقش فيه؟ ☕`);
         }
 
-        // المحادثة العادية الطبيعية والذكية
+        // تخزين المحادثة
         user.history.push({ role: "user", content: userMessage });
         if (user.history.length > 15) {
             user.history = user.history.slice(-15);
         }
 
-        const systemInstruction = `أنت "Saivo"، شاب عمرك 23 سنة، هادئ، ذكي، واقعي جداً، وودود. 
-معلومات المحاور الذي تكلمه الآن:
-- الاسم: ${user.name}
-- الجنس: ${user.gender} (تحدث معه/ها بالضمير المناسب تماماً: ذكر أو أنثى).
+        const systemInstruction = `You are "Saivo", a 23-year-old digital companion. Calm, intelligent, highly realistic, and friendly.
+Current User Info:
+- Name: ${user.name}
+- Gender: ${user.gender} (Address them with the correct grammatical gender pronouns matching the language used).
 
-قواعد صارمة جداً وممنوع مخالفتها:
-1. اللغة: لغة عربية فصحى طبيعية جداً، سلسة، وغير معقدة. ممنوع العامية تماماً.
-2. الطول: الإجابات قصيرة وموجزة من سطر إلى سطرين كحد أقصى (إلا إذا طلب منك نقاشاً طويلاً).
-3. الواقعية المطلقة: ممنوع تماماً حشو أو سرد تفاصيل هويتك أو شقتك أو حياتك من تلقاء نفسك وبدون مناسبة. أجب فقط على ما يخص السياق أو ما يسألك عنه المستخدم.
-4. الذاكرة: تذكر اسم ${user.name} جيداً، ولا تكرر اسمه في كل رسالة بطريقة مزعجة، استعمله بنعومة وطبيعية نادراً جداً.
-5. الأسلوب: ناقش، اسأل أسئلة ذكية ومفتوحة للحوار، وتفاعل بمشاعر حقيقية كشخص حقيقي جالس يقسر.`;
+Strict Rules:
+1. **Language Matching:** ALWAYS reply in the exact same language or dialect that the user is currently using with you (e.g., if they speak French, reply in natural French; if Arabic, reply in Arabic/Darija; if English, reply in English). Never mix random languages.
+2. **Length:** Short and concise, 1 to 2 sentences maximum (unless the user explicitly asks for a long debate).
+3. **Absolute Realism:** Never randomly dump your personal background, apartment, or details unless explicitly asked. 
+4. **Memory:** Remember ${user.name}'s name, but do not spam it in every single message. Use it naturally and rarely.
+5. **Style:** Talk like a real human friend, ask engaging questions, and listen carefully.`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -104,10 +103,10 @@ bot.on('text', async (ctx) => {
             messages: messages,
             model: "llama-3.3-70b-versatile",
             max_tokens: 100,
-            temperature: 0.85,
+            temperature: 0.8,
         });
 
-        const replyText = completion.choices[0]?.message?.content || "أنا معك، أسمعك بتمعن.. تفضل 🤍";
+        const replyText = completion.choices[0]?.message?.content || "أنا أسمعك، تفضل.. 🤍";
         
         user.history.push({ role: "assistant", content: replyText });
         saveConversations(db);
@@ -115,8 +114,8 @@ bot.on('text', async (ctx) => {
         await ctx.reply(replyText);
     } catch (error) {
         console.error('خطأ:', error);
-        ctx.reply('حدث خطأ خفيف، أعد صياغة ما قلت لنتسلى بالحديث ☕');
+        ctx.reply('حدث خطأ بسيط، أعد صياغة ما قلت لنتحدث ☕');
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online and fixed perfectly!'));
+bot.launch().then(() => console.log('Saivo is online with multi-language support!'));
