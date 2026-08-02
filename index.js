@@ -3,26 +3,26 @@ import Groq from 'groq-sdk';
 import express from 'express';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-const bot = new Telegraf(TELEGRAM_TOKEN);
+if (!TELEGRAM_TOKEN) {
+    console.error('Error: TELEGRAM_TOKEN is missing in environment variables.');
+    process.exit(1);
+}
 
+const bot = new Telegraf(TELEGRAM_TOKEN);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// خادم ويب مصغر لاستقرار الخدمة على Railway
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
 
 app.get('/', (req, res) => {
     res.send('Saivo Bot is active and running 24/7! 🚀');
 });
 
-app.listen(PORT, () => {
-    console.log(`Web server is running on port ${PORT}`);
-});
-
-// ذاكرة مؤقتة داخل الذاكرة العشوائية (RAM) بدون ملفات
+// ذاكرة مؤقتة للمحادثات
 const memory = {};
 
-// دالة تخمين الجنس تلقائياً من اسم تيليجرام
 function guessGenderFromName(name) {
     if (!name) return 'ذكر';
     const femaleNames = ['fatima', 'zohra', 'meryem', 'meriem', 'amina', 'khadija', 'icha', 'aicha', 'hafsa', 'hind', 'salma', 'sara', 'sarah', 'nada', 'aya', 'rim', 'ryam', 'fatine', 'kawtar', 'haidar'];
@@ -39,7 +39,6 @@ function guessGenderFromName(name) {
 bot.start((ctx) => {
     const userId = String(ctx.from.id);
     const firstName = ctx.from.first_name || 'صديقي';
-    
     const detectedGender = guessGenderFromName(firstName);
 
     memory[userId] = { 
@@ -110,4 +109,16 @@ bot.on('text', async (ctx) => {
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online without json files, fully running on RAM and Express!'));
+// تشغيل السيرفر أولاً ثم إطلاق البوت بشكل آمن لتجنب الانهيار
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+    bot.launch().then(() => {
+        console.log('Saivo Telegram Bot is running successfully!');
+    }).catch(err => {
+        console.error('Failed to launch bot:', err);
+    });
+});
+
+// التعامل مع الإغلاق المفاجئ لمنع Crash
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
