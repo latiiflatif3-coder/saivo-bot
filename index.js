@@ -15,7 +15,7 @@ function loadConversations() {
             return JSON.parse(data);
         }
     } catch (error) {
-        console.error('خطأ في قراءة ملف الذاكرة:', error);
+        console.error('خطأ في قراءة الذاكرة:', error);
     }
     return {};
 }
@@ -24,59 +24,57 @@ function saveConversations(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
     } catch (error) {
-        console.error('خطأ في حفظ ملف الذاكرة:', error);
+        console.error('خطأ في حفظ الذاكرة:', error);
     }
 }
 
 bot.start((ctx) => {
     const userId = String(ctx.from.id);
+    const firstName = ctx.from.first_name || 'صديقي';
     const db = loadConversations();
     
+    // تسجيل الاسم مباشرة من تيليجرام وسؤال ذكي وخفيف عن الجنس فقط لمرة واحدة
     db[userId] = { 
-        name: null, 
-        gender: null, 
-        step: 'AWAITING_NAME', 
+        name: firstName, 
+        gender: db[userId]?.gender || null, 
         history: [] 
     };
     saveConversations(db);
 
-    ctx.reply('أهلاً.. أنا Saivo. سعيد بمعرفتك، ما هو اسمك؟ 🤍');
+    if (!db[userId].gender) {
+        return ctx.reply(`أهلاً بك يا ${firstName}. أنا Saivo.. هل أنت ذكر أم أنثى؟ (حتى أعرف كيف أخاطبك بطريقة طبيعية وعفوية) ✨`);
+    } else {
+        return ctx.reply(`أهلاً بك من جديد يا ${firstName}. أسمعك، تفضل بما يدور في ذهنك 🤍`);
+    }
 });
 
 bot.on('text', async (ctx) => {
     try {
         const userId = String(ctx.from.id);
+        const firstName = ctx.from.first_name || 'صديقي';
         const userMessage = ctx.message.text.trim();
         await ctx.sendChatAction('typing');
 
         const db = loadConversations();
+        
         if (!db[userId]) {
-            db[userId] = { name: null, gender: null, step: 'AWAITING_NAME', history: [] };
+            db[userId] = { name: firstName, gender: null, history: [] };
         }
 
         const user = db[userId];
 
-        // خطوة الاسم
-        if (user.step === 'AWAITING_NAME') {
-            user.name = userMessage;
-            user.step = 'AWAITING_GENDER';
-            saveConversations(db);
-            return ctx.reply(`تشرفت بك يا ${user.name}.. هل أنت ذكر أم أنثى؟ (حتى أعرف كيف أخاطبك بطريقة طبيعية) ✨`);
-        }
-
-        // خطوة الجنس
-        if (user.step === 'AWAITING_GENDER') {
+        // إذا لم يكن الجنس محدد بعد، نعتبر الرسالة الحالية هي تحديد الجنس (ذكر/أنثى)
+        if (!user.gender) {
             const msgLower = userMessage.toLowerCase();
             if (msgLower.includes('ذكر') || msgLower.includes('رجل') || msgLower.includes('ولد')) {
                 user.gender = 'ذكر';
-            } else if (user.gender = msgLower.includes('أنثى') || msgLower.includes('بنت') || msgLower.includes('امرأة')) {
+            } else if (msgLower.includes('أنثى') || msgLower.includes('بنت') || msgLower.includes('امرأة')) {
                 user.gender = 'أنثى';
             } else {
-                user.gender = 'ذكر';
+                user.gender = 'ذكر'; // افتراضي
             }
-            user.step = 'READY';
             saveConversations(db);
-            return ctx.reply(`سعيد بوجودك معي يا ${user.name}. قل لي، بماذا تفكر اليوم أو ماذا ترغب أن نتناقش فيه؟ ☕`);
+            return ctx.reply(`سعيد جداً بوجودك معي يا ${user.name}. قل لي، بماذا تفكر اليوم أو ماذا ترغب أن نتناقش فيه؟ ☕`);
         }
 
         // المحادثة العادية الطبيعية والذكية
@@ -94,7 +92,7 @@ bot.on('text', async (ctx) => {
 1. اللغة: لغة عربية فصحى طبيعية جداً، سلسة، وغير معقدة. ممنوع العامية تماماً.
 2. الطول: الإجابات قصيرة وموجزة من سطر إلى سطرين كحد أقصى (إلا إذا طلب منك نقاشاً طويلاً).
 3. الواقعية المطلقة: ممنوع تماماً حشو أو سرد تفاصيل هويتك أو شقتك أو حياتك من تلقاء نفسك وبدون مناسبة. أجب فقط على ما يخص السياق أو ما يسألك عنه المستخدم.
-4. الذاكرة: تذكر اسم ${user.name} جيداً، ولا تكرر اسمه في كل رسالة بطريقة مزعجة، استعمله بنعومة وطبيعية نادراً.
+4. الذاكرة: تذكر اسم ${user.name} جيداً، ولا تكرر اسمه في كل رسالة بطريقة مزعجة، استعمله بنعومة وطبيعية نادراً جداً.
 5. الأسلوب: ناقش، اسأل أسئلة ذكية ومفتوحة للحوار، وتفاعل بمشاعر حقيقية كشخص حقيقي جالس يقسر.`;
 
         const messages = [
@@ -121,4 +119,4 @@ bot.on('text', async (ctx) => {
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online and natural!'));
+bot.launch().then(() => console.log('Saivo is online and fixed perfectly!'));
