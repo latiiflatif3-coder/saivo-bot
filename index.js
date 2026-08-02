@@ -63,7 +63,7 @@ bot.on('text', async (ctx) => {
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: "llama-3.3-70b-versatile",
-            max_tokens: 120,
+            max_tokens: 80,
             temperature: 0.7,
         });
 
@@ -74,7 +74,7 @@ bot.on('text', async (ctx) => {
         await ctx.reply(replyText);
     } catch (error) {
         console.error('خطأ:', error);
-        await ctx.reply('وقع شي مشكل.');
+        await ctx.reply('معاك.. قل لي شنو كاين؟ 🤍');
     }
 });
 
