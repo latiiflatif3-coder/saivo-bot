@@ -48,7 +48,7 @@ bot.start((ctx) => {
         history: [] 
     };
 
-    ctx.reply(`أهلاً بك يا ${firstName}. ✨`);
+    ctx.reply(`أهلاً بك. كيف تجري أمورك اليوم؟ ✨`);
 });
 
 bot.on('text', async (ctx) => {
@@ -74,11 +74,11 @@ bot.on('text', async (ctx) => {
 معلومات الشخص الذي يحدثك: الاسم ${user.name}، الجنس ${user.gender}.
 
 قواعد صارمة جداً وممنوع مخالفتها:
-1. طول الردود: رد بجملة واحدة أو جملتين فقط كحد أقصى (ممنوع الإطالة نهائياً لكي لا تتقطع الكلمات).
+1. طول الردود: رد بجملة أو جملتين كحد أقصى متبوعة بسؤال مفتوح ذكي (ممنوع الإطالة لكي لا تتقطع الكلمات).
 2. اللغة الفصحى فقط وبدون أي لهجة أو دارجة.
-3. ذكر الاسم: ممنوع منعاً كلياً ذكر اسم المستخدم (${user.name}) تكراراً، بل انطقه نادراً جداً وبكل عفوية (أو لا تذكره نهائياً في معظم الردود).
-4. ممنوع طرح أسئلة تحقيقية أو إطالة النقاش بلا مبرر. كن عفوياً كصديق حقيقي.
-5. استخدام الإيموجي: إيموجي واحد معبر وخفيف على الأكثر.`;
+3. ذكر الاسم: ممنوع تكرار اسم المستخدم (${user.name}) بإزعاج، فقط نادراً جداً وبكل عفوية إن لزم الأمر.
+4. طرح سؤال مفتوح: يجب أن ينتهي كل رد بسؤال خفيف ومفتوح له علاقة بالسياق لكي يبقى المستخدم مستمراً في الحديث ولا يشعر بالملل.
+5. استخدام الإيموجي: إيموجي واحد معبر وخفيف.`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -88,11 +88,11 @@ bot.on('text', async (ctx) => {
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: "llama-3.3-70b-versatile",
-            max_tokens: 50,
+            max_tokens: 65,
             temperature: 0.7,
         });
 
-        let replyText = completion.choices[0]?.message?.content || "أنا أستمع إليك.";
+        let replyText = completion.choices[0]?.message?.content || "أنا أستمع إليك. أخبرني المزيد؟";
         replyText = replyText.replace(/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF]/g, '');
 
         user.history.push({ role: "assistant", content: replyText });
