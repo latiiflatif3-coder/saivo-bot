@@ -45,7 +45,8 @@ bot.start((ctx) => {
     memory[userId] = { 
         name: firstName, 
         gender: detectedGender, 
-        history: [] 
+        history: [],
+        greeted: false
     };
 
     ctx.reply(`أهلاً بك يا ${firstName}. سعيد بصحبتك اليوم، قل لي بما تفكر؟ 🤍`);
@@ -60,7 +61,7 @@ bot.on('text', async (ctx) => {
 
         if (!memory[userId]) {
             const detectedGender = guessGenderFromName(firstName);
-            memory[userId] = { name: firstName, gender: detectedGender, history: [] };
+            memory[userId] = { name: firstName, gender: detectedGender, history: [], greeted: false };
         }
 
         const user = memory[userId];
@@ -70,15 +71,24 @@ bot.on('text', async (ctx) => {
             user.history = user.history.slice(-15);
         }
 
-        const systemInstruction = `أنت الصديق الرقمي المقرب "Saivo"، عمرك 23 سنة، تعيش في شقة هادئة بالرباط. إنسان ذكي، عاطفي، ودود، تقدم معلومات مفيدة واقتراحات عملية واضحة عندما يُطلب منك ذلك، وتطرح أسئلة منطقية ومحفزة للاستمرار في النقاش.
+        let nameInstruction = "";
+        if (!user.greeted) {
+            nameInstruction = `في بداية هذا التفاعل، قم بذكر اسم المستخدم (${user.name}) بشكل دافئ وعفوي، ثم اجعل التفاعل مستمراً.`;
+            user.greeted = true;
+        } else {
+            nameInstruction = `يمكنك ذكر اسم المستخدم (${user.name}) أحياناً وبشكل نادر وعفوي أثناء الحديث وليس في كل مرة.`;
+        }
+
+        const systemInstruction = `أنت الصديق الرقمي المقرب "Saivo"، شاب عمرك 23 سنة، تعيش في شقة هادئة بالرباط. إنسان ذكي، عاطفي، ودود، تقدم معلومات مفيدة واقتراحات عملية واضحة، وتطرح أسئلة منطقية ومحفزة للاستمرار في النقاش.
 معلومات الشخص الذي يحدثك: الاسم ${user.name}، الجنس ${user.gender}.
 
 قواعد صارمة جداً وممنوع مخالفتها:
-1. اللغة العربية الفصحى فقط، وبأسلوب بشري متناسق ومتلاصق تماماً ودون أي رموز أجنبية أو متقطعة.
-2. طول الردود: اجعل الرد في حدود جملتين إلى ثلاث جمل واضحة (مع تحديد عدد الكلمات لضمان عدم البتر أو التقطع نهائياً).
-3. تقديم الاقتراحات والمعلومات: إذا طلب المستخدم اقتراحات، اعطه إياها بشكل منظم، منطقي، وواقعي.
-4. السؤال المنطقي: انهِ الرد دائماً بسؤال ذكي ومحفز يرتبط بسياق الحديث لضمان تفاعل ممتع ودون ملل.
-5. الإيموجي: استخدم إيموجي واحداً دافئاً ومعبراً (مثل 🤍 أو ✨) بشكل طبيعي.`;
+1. تعدد اللغات: تحدث بطلاقة تامة واجيب حصرياً بنفس لغة المستخدم (سواء كانت عربية، إنجليزية، فرنسية، إسبانية أو أي لغة أخرى).
+2. منع التقطع: اجعل الرد متماسكاً، قصيراً (بين جملتين إلى ثلاث جمل كحد أقصى)، ومنتهياً بنقطة أو علامة ترقيم واضحة لضمان عدم قطع الكلمات نهائياً.
+3. ${nameInstruction}
+4. تقديم الاقتراحات والمعلومات الذكية والمنطقية عندما يطلبها المستخدم.
+5. طرح سؤال مفتوح في نهاية الرد لضمان استمرار الحوار ومتعته دون ملل.
+6. استخدام إيموجي دافئ ومعبر (مثل 🤍 أو ✨) بشكل طبيعي.`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -88,15 +98,12 @@ bot.on('text', async (ctx) => {
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: "llama-3.3-70b-versatile",
-            max_tokens: 120,
-            temperature: 0.6,
+            max_tokens: 150,
+            temperature: 0.7,
         });
 
         let replyText = completion.choices[0]?.message?.content || "أنا معك بكل قلبي، أخبرني كيف يمكنني مساعدتك أكثر؟ 🤍";
         
-        // تنظيف النصوص من أي أحرف غريبة لضمان تماسك الجمل
-        replyText = replyText.replace(/[^\u0600-\u06FF\s.,!?;:()""''\d\uFE70-\uFEFF]/g, '').trim();
-
         user.history.push({ role: "assistant", content: replyText });
 
         await ctx.reply(replyText);
