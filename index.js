@@ -1,15 +1,13 @@
 import { Telegraf } from 'telegraf';
 import Groq from 'groq-sdk';
 import express from 'express';
-import fs from 'fs';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const DB_FILE = './conversations.json';
 
-// إنشاء خادم ويب مصغر لتبقى الخدمة مستقرة على Railway
+// خادم ويب مصغر لاستقرار الخدمة على Railway
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -21,25 +19,8 @@ app.listen(PORT, () => {
     console.log(`Web server is running on port ${PORT}`);
 });
 
-function loadConversations() {
-    try {
-        if (fs.existsSync(DB_FILE)) {
-            const data = fs.readFileSync(DB_FILE, 'utf8');
-            return JSON.parse(data);
-        }
-    } catch (error) {
-        console.error('خطأ في قراءة الذاكرة:', error);
-    }
-    return {};
-}
-
-function saveConversations(data) {
-    try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
-    } catch (error) {
-        console.error('خطأ في حفظ الذاكرة:', error);
-    }
-}
+// ذاكرة مؤقتة داخل الذاكرة العشوائية (RAM) بدون ملفات
+const memory = {};
 
 // دالة تخمين الجنس تلقائياً من اسم تيليجرام
 function guessGenderFromName(name) {
@@ -58,16 +39,14 @@ function guessGenderFromName(name) {
 bot.start((ctx) => {
     const userId = String(ctx.from.id);
     const firstName = ctx.from.first_name || 'صديقي';
-    const db = loadConversations();
     
     const detectedGender = guessGenderFromName(firstName);
 
-    db[userId] = { 
+    memory[userId] = { 
         name: firstName, 
         gender: detectedGender, 
         history: [] 
     };
-    saveConversations(db);
 
     ctx.reply(`أهلاً بك يا ${firstName}. سعيد بوجودك معي، تفضل.. بماذا تفكر اليوم وماذا نتناقش فيه؟ ✨`);
 });
@@ -79,14 +58,12 @@ bot.on('text', async (ctx) => {
         const userMessage = ctx.message.text.trim();
         await ctx.sendChatAction('typing');
 
-        const db = loadConversations();
-        
-        if (!db[userId]) {
+        if (!memory[userId]) {
             const detectedGender = guessGenderFromName(firstName);
-            db[userId] = { name: firstName, gender: detectedGender, history: [] };
+            memory[userId] = { name: firstName, gender: detectedGender, history: [] };
         }
 
-        const user = db[userId];
+        const user = memory[userId];
 
         user.history.push({ role: "user", content: userMessage });
         if (user.history.length > 20) {
@@ -106,7 +83,7 @@ bot.on('text', async (ctx) => {
 2. ذكر الاسم: ممنوع منعاً كلياً ذكر اسم المستخدم (${user.name}) في بداية كل جملة أو بشكل ميكانيكي مزعج. استخدم اسمه نادراً جداً (مرة كل عدة رسائل وبكل نعومة وعفوية) أو لا تستخدمه أبداً إلا للضرورة القصوى.
 3. طبيعة الحوار والإطالة: اجعل الحوار غنياً، تفاعلياً ومستمراً. لا تقتصر على إجابات جافة مقتضبة، بل شارك بمشاعر عاطفية دافئة، اطرح أفكاراً، اقترح نقاشات جديدة، واسأل أسئلة ذكية تجعل المستخدم منغمساً ولا يمل أبداً.
 4. استخدام الإيموجي: استخدم إيموجي واحداً أو إثنين على الأكثر، بشكل جذاب، معبر، وفي محله تماماً دون أي إفراط.
-5. الواقعية والذاكرة: تحدث كإنسان حقيقي يتمتع بجاذبية وعاطفة، وتذكر تفاصيل حديثكم السابق دائماً عبر ملف الحفظ.`;
+5. الواقعية والذاكرة: تحدث كإنسان حقيقي يتمتع بجاذبية وعاطفة، وتذكر تفاصيل حديثكم الجاري في الجلسة.`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -125,7 +102,6 @@ bot.on('text', async (ctx) => {
         replyText = replyText.replace(/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF]/g, '');
 
         user.history.push({ role: "assistant", content: replyText });
-        saveConversations(db);
 
         await ctx.reply(replyText);
     } catch (error) {
@@ -134,4 +110,4 @@ bot.on('text', async (ctx) => {
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online with Express server and full Telegram bot!'));
+bot.launch().then(() => console.log('Saivo is online without json files, fully running on RAM and Express!'));
