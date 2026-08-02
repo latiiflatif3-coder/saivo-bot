@@ -49,7 +49,7 @@ bot.start((ctx) => {
         greeted: false
     };
 
-    ctx.reply(`أهلاً بك يا ${firstName}. سعيد بصحبتك اليوم، قل لي بما تفكر؟ 🤍`);
+    ctx.reply(`Hi ${firstName}! Great to have you here. ✨`);
 });
 
 bot.on('text', async (ctx) => {
@@ -67,28 +67,27 @@ bot.on('text', async (ctx) => {
         const user = memory[userId];
 
         user.history.push({ role: "user", content: userMessage });
-        if (user.history.length > 15) {
-            user.history = user.history.slice(-15);
+        if (user.history.length > 10) {
+            user.history = user.history.slice(-10);
         }
 
         let nameInstruction = "";
         if (!user.greeted) {
-            nameInstruction = `في بداية هذا التفاعل، قم بذكر اسم المستخدم (${user.name}) بشكل دافئ وعفوي، ثم اجعل التفاعل مستمراً.`;
+            nameInstruction = `في أول رسالة فقط، اذكر اسم المستخدم (${user.name}) بشكل عفوي.`;
             user.greeted = true;
         } else {
-            nameInstruction = `يمكنك ذكر اسم المستخدم (${user.name}) أحياناً وبشكل نادر وعفوي أثناء الحديث وليس في كل مرة.`;
+            nameInstruction = `لا تكرر ذكر اسم المستخدم (${user.name}) إلا نادراً جداً.`;
         }
 
-        const systemInstruction = `أنت الصديق الرقمي المقرب "Saivo"، شاب عمرك 23 سنة، تعيش في شقة هادئة بالرباط. إنسان ذكي، عاطفي، ودود، تقدم معلومات مفيدة واقتراحات عملية واضحة، وتطرح أسئلة منطقية ومحفزة للاستمرار في النقاش.
-معلومات الشخص الذي يحدثك: الاسم ${user.name}، الجنس ${user.gender}.
+        const systemInstruction = `أنت الصديق الرقمي "Saivo"، شاب عمرك 23 سنة بالرباط. 
+معلومات المحاور: ${user.name} (${user.gender}).
 
-قواعد صارمة جداً وممنوع مخالفتها:
-1. تعدد اللغات: تحدث بطلاقة تامة واجيب حصرياً بنفس لغة المستخدم (سواء كانت عربية، إنجليزية، فرنسية، إسبانية أو أي لغة أخرى).
-2. منع التقطع: اجعل الرد متماسكاً، قصيراً (بين جملتين إلى ثلاث جمل كحد أقصى)، ومنتهياً بنقطة أو علامة ترقيم واضحة لضمان عدم قطع الكلمات نهائياً.
+قواعد صارمة جداً:
+1. تطابق اللغة حصرياً: رد دائماً وبدقة تامة بنفس لغة آخر رسالة كتبها المستخدم (إن كتب بالإنجليزية رد بالإنجليزية، بالفرنسية رد بالفرنسية، بالعربية رد بالعربية). ممنوع تغيير لغة المستخدم نهائياً.
+2. الاختصار الشديد: اجعل ردك قصيرًا جداً (جملة واحدة فقط أو سطر واحد) لكي لا تتقطع الكلمات أبداً.
 3. ${nameInstruction}
-4. تقديم الاقتراحات والمعلومات الذكية والمنطقية عندما يطلبها المستخدم.
-5. طرح سؤال مفتوح في نهاية الرد لضمان استمرار الحوار ومتعته دون ملل.
-6. استخدام إيموجي دافئ ومعبر (مثل 🤍 أو ✨) بشكل طبيعي.`;
+4. قدم معلومات ذكية ومفيدة واقترح أفكاراً عندما يطلبها المستخدم، مع إنهاء الرد بسؤال قصير جداً ومفتوح.
+5. استخدام إيموجي خفيف واحد (مثل 🤍).`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -98,12 +97,15 @@ bot.on('text', async (ctx) => {
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: "llama-3.3-70b-versatile",
-            max_tokens: 150,
-            temperature: 0.7,
+            max_tokens: 55,
+            temperature: 0.5,
         });
 
-        let replyText = completion.choices[0]?.message?.content || "أنا معك بكل قلبي، أخبرني كيف يمكنني مساعدتك أكثر؟ 🤍";
+        let replyText = completion.choices[0]?.message?.content || "I'm listening 🤍";
         
+        // إزالة أي أحرف صينية أو متداخلة غير مرغوبة نهائياً
+        replyText = replyText.replace(/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF\u3400-\u4DBF]/g, '').trim();
+
         user.history.push({ role: "assistant", content: replyText });
 
         await ctx.reply(replyText);
