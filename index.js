@@ -1,83 +1,62 @@
 import { Telegraf } from 'telegraf';
 import Groq from 'groq-sdk';
-import fs from 'fs';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-const DB_FILE = './conversations.json';
+const memoryDB = {};
 
-function loadConversations() {
-    try {
-        if (fs.existsSync(DB_FILE)) {
-            const data = fs.readFileSync(DB_FILE, 'utf8');
-            return JSON.parse(data);
-        }
-    } catch (error) {
-        console.error('خطأ في القراءة:', error);
-    }
-    return {};
-}
-
-function saveConversations(data) {
-    try {
-        fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
-    } catch (error) {
-        console.error('خطأ في الحفظ:', error);
-    }
-}
-
-const systemInstruction = `أنت "Saivo"، صديق رقمي حقيقي، جذاب، ذكي، وودي للغاية.
+const systemInstruction = `أنت "Saivo"، صديق رقمي حقيقي، بشري جداً، عفوي، وذكي.
 قواعد صارمة جداً وممنوع مخالفتها:
-- تفاعل بنفس لغة أو لهجة المستخدم تماماً.
-- الطول حصرياً: من سطر واحد إلى 3 أسطر بحد أقصى. ممنوع فقرات طويلة.
-- الأسلوب: ناقش بعاطفة ودفء مع إيموجي في مكانه دون إفراط.`;
+- تفاعل بنفس لغة أو لهجة المستخدم تماماً وبكل واقعية، كأنك صديق حقيقي جالس معها كتقسر.
+- ممنوع منعاً كلياً استعمال عبارات الروبوتات أو الإجابات النمطية الجاهزة.
+- الطول: من سطر واحد إلى سطرين بحد أقصى، كلام مختصر، واقعي، وله معنى عميق.
+- الأسلوب: دافئ، حقيقي، عفوي، مع إيموجي خفيف جداً وقليل في مكانه.`;
 
 bot.start((ctx) => {
-    const userId = String(ctx.from.id);
-    const db = loadConversations();
-    db[userId] = { name: ctx.from.first_name || 'User', history: [] };
-    saveConversations(db);
-    ctx.reply('أهلاً.. معاك 🤍');
+    const userId = ctx.from.id;
+    memoryDB[userId] = [];
+    ctx.reply('هاني معاك أخويا، شنو كاين؟ 🤍');
 });
 
 bot.on('text', async (ctx) => {
     try {
-        const userId = String(ctx.from.id);
+        const userId = ctx.from.id;
         const userMessage = ctx.message.text;
         await ctx.sendChatAction('typing');
 
-        const db = loadConversations();
-        if (!db[userId]) db[userId] = { name: ctx.from.first_name || 'User', history: [] };
-        
-        const history = db[userId].history;
-        history.push({ role: "user", content: userMessage });
+        if (!memoryDB[userId]) {
+            memoryDB[userId] = [];
+        }
 
-        // تقليص الذاكرة المؤقتة لآخر 6 رسائل لتجنب تجاوز الحد الأقصى للرموز
-        const recentHistory = history.slice(-6);
+        memoryDB[userId].push({ role: "user", content: userMessage });
+
+        if (memoryDB[userId].length > 10) {
+            memoryDB[userId] = memoryDB[userId].slice(-10);
+        }
 
         const messages = [
             { role: "system", content: systemInstruction },
-            ...recentHistory.map(h => ({ role: h.role, content: h.content }))
+            ...memoryDB[userId]
         ];
 
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: "llama-3.3-70b-versatile",
-            max_tokens: 150,
-            temperature: 0.7,
+            max_tokens: 80,
+            temperature: 0.9,
         });
 
-        const replyText = completion.choices[0]?.message?.content || "موافق.. شنو كاين؟ ✨";
-        history.push({ role: "assistant", content: replyText });
-        saveConversations(db);
+        const replyText = completion.choices[0]?.message?.content || "دوي معايا أنا كنسمعك مزيان 🤍";
+        
+        memoryDB[userId].push({ role: "assistant", content: replyText });
 
         await ctx.reply(replyText);
     } catch (error) {
-        console.error('خطأ تفصيلي:', error);
-        await ctx.reply('عاود صياغة رسالتك عافاك، أنا معك 🤍');
+        console.error('خطأ:', error);
+        ctx.reply('دخلتني شي دوخة، عاود صياغة هضرتك 🤍');
     }
 });
 
