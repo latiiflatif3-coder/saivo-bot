@@ -1,5 +1,6 @@
 import { Telegraf } from 'telegraf';
 import Groq from 'groq-sdk';
+import express from 'express';
 import fs from 'fs';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
@@ -7,6 +8,18 @@ const bot = new Telegraf(TELEGRAM_TOKEN);
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const DB_FILE = './conversations.json';
+
+// إنشاء خادم ويب مصغر لتبقى الخدمة مستقرة على Railway
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+    res.send('Saivo Bot is active and running 24/7! 🚀');
+});
+
+app.listen(PORT, () => {
+    console.log(`Web server is running on port ${PORT}`);
+});
 
 function loadConversations() {
     try {
@@ -109,7 +122,6 @@ bot.on('text', async (ctx) => {
 
         let replyText = completion.choices[0]?.message?.content || "أنا أسمعك بتمعن.. أخبرني المزيد عن أفكارك 🤍";
         
-        // تنظيف النصوص لضمان خلوها من أي رموز غريبة
         replyText = replyText.replace(/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF]/g, '');
 
         user.history.push({ role: "assistant", content: replyText });
@@ -122,4 +134,4 @@ bot.on('text', async (ctx) => {
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online with full identity, persistent JSON memory, and deep engagement!'));
+bot.launch().then(() => console.log('Saivo is online with Express server and full Telegram bot!'));
