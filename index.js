@@ -4,7 +4,7 @@ import express from 'express';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 if (!TELEGRAM_TOKEN) {
-    console.error('Error: TELEGRAM_TOKEN is missing in environment variables.');
+    console.error('Error: TELEGRAM_TOKEN is missing.');
     process.exit(1);
 }
 
@@ -16,9 +16,14 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+// مسار لفحص حالة السيرفر
 app.get('/', (req, res) => {
     res.send('Saivo Bot is active and running 24/7! 🚀');
 });
+
+// ربط Webhook لتليجرام لتجنب أي مشاكل Crash على السحاب
+const SECRET_PATH = `/telegraf/${bot.secretPathComponent()}`;
+app.use(bot.webhookCallback(SECRET_PATH));
 
 // ذاكرة مؤقتة للمحادثات
 const memory = {};
@@ -109,16 +114,17 @@ bot.on('text', async (ctx) => {
     }
 });
 
-// تشغيل السيرفر أولاً ثم إطلاق البوت بشكل آمن لتجنب الانهيار
-app.listen(PORT, () => {
+// تشغيل السيرفر وضبط الويب هوك تلقائياً مع نطاق Railway
+app.listen(PORT, async () => {
     console.log(`Server is running on port ${PORT}`);
-    bot.launch().then(() => {
-        console.log('Saivo Telegram Bot is running successfully!');
-    }).catch(err => {
-        console.error('Failed to launch bot:', err);
-    });
+    
+    // إذا كنت على Railway، ضع رابط مشروعك هنا أو دعه يتعرف عليه تلقائياً
+    const RAILWAY_URL = process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null;
+    
+    if (RAILWAY_URL) {
+        await bot.telegram.setWebhook(`${RAILWAY_URL}${SECRET_PATH}`);
+        console.log(`Webhook set to ${RAILWAY_URL}${SECRET_PATH}`);
+    } else {
+        console.log('Running locally or RAILWAY_STATIC_URL is not set.');
+    }
 });
-
-// التعامل مع الإغلاق المفاجئ لمنع Crash
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
