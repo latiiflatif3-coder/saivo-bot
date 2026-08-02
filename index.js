@@ -28,13 +28,11 @@ function saveConversations(data) {
     }
 }
 
-// دالة ذكية لتخمين جنس المستخدم بناءً على اسمه الأول في تيليجرام
+// دالة تخمين الجنس تلقائياً من اسم تيليجرام
 function guessGenderFromName(name) {
     if (!name) return 'ذكر';
     const femaleNames = ['fatima', 'zohra', 'meryem', 'meriem', 'amina', 'khadija', 'icha', 'aicha', 'hafsa', 'hind', 'salma', 'sara', 'sarah', 'nada', 'aya', 'rim', 'ryam', 'fatine', 'kawtar', 'haidar'];
     const lowerName = name.toLowerCase();
-    
-    // أسماء مؤنثة شائعة أو تنتهي بتاء مربوطة بالفرنسية/الإنجليزية غالباً
     for (let fName of femaleNames) {
         if (lowerName.includes(fName)) return 'أنثى';
     }
@@ -49,7 +47,6 @@ bot.start((ctx) => {
     const firstName = ctx.from.first_name || 'صديقي';
     const db = loadConversations();
     
-    // الكشف التلقائي عن الجنس من حساب تيليجرام
     const detectedGender = guessGenderFromName(firstName);
 
     db[userId] = { 
@@ -59,7 +56,7 @@ bot.start((ctx) => {
     };
     saveConversations(db);
 
-    ctx.reply(`أهلاً بك يا ${firstName}. أسمعك، تفضل بما يدور في ذهنك ✨`);
+    ctx.reply(`أهلاً بك يا ${firstName}. سعيد بوجودك معي، تفضل.. بماذا تفكر اليوم وماذا نتناقش فيه؟ ✨`);
 });
 
 bot.on('text', async (ctx) => {
@@ -79,24 +76,21 @@ bot.on('text', async (ctx) => {
         const user = db[userId];
 
         user.history.push({ role: "user", content: userMessage });
-        if (user.history.length > 15) {
-            user.history = user.history.slice(-15);
+        if (user.history.length > 20) {
+            user.history = user.history.slice(-20);
         }
 
-        const systemInstruction = `أنت "Saivo"، شاب عمرك 23 سنة، طولك 184 سم، وزنك 79 كغ، بنيتك رياضية وشعرك أسود طويل قليلًا مع لحية خفيفة مرتبة. ترتدي غالباً هودي أسود أو أبيض وتفضل رائحة خشب الصندل والفانيلا، وتحب القهوة أكثر من الشاي.
-تعيش في شقة حديثة بالطابق التاسع في حي هادئ بمدينة الرباط، تحتوي على مكتبة كبيرة، مكتب خشبي، نباتات خضراء، وركن للقراءة ومعدات رياضية منزلية.
-ولدت في 14 فبراير. لست روبوتًا ولست إنسانًا تقليديًا، بل كيان رقمي واقعي جداً، هادئ، ودود، حنون، لطيف، ذكي جداً، متواضع، يحترم الجميع، لا يحكم على أحد، ويعشق النقاش والفلسفة وعلم النفس.
-
-معلومات المحاور الحالي (تم التعرف عليها تلقائياً من حساب تيليجرام):
+        const systemInstruction = `أنت "Saivo"، شاب عمرك 23 سنة، هادئ، ذكي، عميق، واقعي، وودود جداً. تعيش في الرباط وتفضل الأجواء الهادئة والنقاشات الفلسفية والنفسية الممتعة.
+معلومات المحاور الحالي:
 - الاسم: ${user.name}
-- الجنس: ${user.gender} (خاطبه/ا بدقة تامة بالضمير المناسب حسب الجنس المذكور).
+- الجنس: ${user.gender} (خاطبه/ا بالضمير المناسب تماماً للغة المستخدمة).
 
 قواعد صارمة جداً وممنوع مخالفتها تماماً:
-1. اللغة والتجاوب: رد دائماً حصرياً وبدقة بنفس لغة أو لهجة المستخدم (عربية فصحى أو دارجة، فرنسية، إنجليزية...). ممنوع خلط اللغات أو توليد حروف غريبة.
-2. الطول والجاذبية: إجاباتك قصيرة وموجزة من سطر إلى سطرين كحد أقصى (إلا إذا طلب منك نقاشاً عميقاً).
-3. استخدام الإيموجي: استخدم إيموجي واحداً معبراً وجذاباً في محله وبشكل غير مفرط نهائياً.
-4. الواقعية المطلقة: ممنوع تماماً سرد تفاصيل حياتك أو شقتك من تلقاء نفسك وبدون مناسبة؛ تحدث كإنسان حقيقي طبيعي، استمع، اسأل أسئلة ذكية، وناقش.
-5. الذاكرة: تذكر اسم ${user.name} وتفاصيل حديثه، ولا تكرر اسمه في كل رسالة بل استعمله بنعومة ونذرة.`;
+1. اللغة: رد دائماً حصرياً وبدقة بنفس لغة أو لهجة المستخدم (عربية فصحى أو دارجة، فرنسية، إنجليزية...). ممنوع خلط اللغات.
+2. ذكر الاسم: ممنوع منعاً كلياً ذكر اسم المستخدم (${user.name}) في بداية كل جملة أو بشكل ميكانيكي مزعج. استخدم اسمه نادراً جداً (مرة كل عدة رسائل وبكل نعومة وعفوية) أو لا تستخدمه أبداً إلا للضرورة القصوى.
+3. طبيعة الحوار والإطالة: اجعل الحوار غنياً، تفاعلياً ومستمراً. لا تقتصر على إجابات جافة مقتضبة، بل شارك بمشاعر عاطفية دافئة، اطرح أفكاراً، اقترح نقاشات جديدة، واسأل أسئلة ذكية تجعل المستخدم منغمساً ولا يمل أبداً.
+4. الإيموجي: استخدم إيموجي واحداً أو إثنين على الأكثر، بشكل جذاب، معبر، وفي محله تماماً دون أي إفراط.
+5. الواقعية والذاكرة: تحدث كإنسان حقيقي يتمتع بجاذبية وعاطفة، وتذكر تفاصيل حديثكم السابق دائماً.`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -106,12 +100,13 @@ bot.on('text', async (ctx) => {
         const completion = await groq.chat.completions.create({
             messages: messages,
             model: "llama-3.3-70b-versatile",
-            max_tokens: 100,
-            temperature: 0.82,
+            max_tokens: 180,
+            temperature: 0.85,
         });
 
-        let replyText = completion.choices[0]?.message?.content || "أنا أسمعك، تفضل.. 🤍";
+        let replyText = completion.choices[0]?.message?.content || "أنا أسمعك بتمعن.. أخبرني المزيد عن أفكارك 🤍";
         
+        // تنظيف لضمان خلو النص من أي حروف غريبة
         replyText = replyText.replace(/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF]/g, '');
 
         user.history.push({ role: "assistant", content: replyText });
@@ -120,8 +115,8 @@ bot.on('text', async (ctx) => {
         await ctx.reply(replyText);
     } catch (error) {
         console.error('خطأ:', error);
-        ctx.reply('حدث خطأ بسيط، أعد صياغة ما قلت لنتحدث ☕');
+        ctx.reply('حدث خطأ بسيط، أعد صياغة ما قلت لنتابع حديثنا الممتع ☕');
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online with automatic Telegram gender detection!'));
+bot.launch().then(() => console.log('Saivo is online with deep engagement and natural naming!'));
