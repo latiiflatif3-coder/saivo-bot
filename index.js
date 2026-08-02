@@ -1,6 +1,5 @@
 import { Telegraf } from 'telegraf';
 import Groq from 'groq-sdk';
-import express from 'express';
 
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 if (!TELEGRAM_TOKEN) {
@@ -10,20 +9,6 @@ if (!TELEGRAM_TOKEN) {
 
 const bot = new Telegraf(TELEGRAM_TOKEN);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-app.use(express.json());
-
-// مسار لفحص حالة السيرفر
-app.get('/', (req, res) => {
-    res.send('Saivo Bot is active and running 24/7! 🚀');
-});
-
-// ربط Webhook لتليجرام لتجنب أي مشاكل Crash على السحاب
-const SECRET_PATH = `/telegraf/${bot.secretPathComponent()}`;
-app.use(bot.webhookCallback(SECRET_PATH));
 
 // ذاكرة مؤقتة للمحادثات
 const memory = {};
@@ -114,17 +99,12 @@ bot.on('text', async (ctx) => {
     }
 });
 
-// تشغيل السيرفر وضبط الويب هوك تلقائياً مع نطاق Railway
-app.listen(PORT, async () => {
-    console.log(`Server is running on port ${PORT}`);
-    
-    // إذا كنت على Railway، ضع رابط مشروعك هنا أو دعه يتعرف عليه تلقائياً
-    const RAILWAY_URL = process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null;
-    
-    if (RAILWAY_URL) {
-        await bot.telegram.setWebhook(`${RAILWAY_URL}${SECRET_PATH}`);
-        console.log(`Webhook set to ${RAILWAY_URL}${SECRET_PATH}`);
-    } else {
-        console.log('Running locally or RAILWAY_STATIC_URL is not set.');
-    }
+// إطلاق البوت
+bot.launch().then(() => {
+    console.log('Saivo Bot is running successfully!');
+}).catch(err => {
+    console.error('Failed to launch bot:', err);
 });
+
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
