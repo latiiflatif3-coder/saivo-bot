@@ -8,7 +8,6 @@ const bot = new Telegraf(TELEGRAM_TOKEN);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const DB_FILE = './conversations.json';
 
-// تحميل الذاكرة من الملف
 function loadConversations() {
     try {
         if (fs.existsSync(DB_FILE)) {
@@ -21,7 +20,6 @@ function loadConversations() {
     return {};
 }
 
-// حفظ الذاكرة في الملف
 function saveConversations(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
@@ -30,49 +28,79 @@ function saveConversations(data) {
     }
 }
 
-const systemInstruction = `أنت "Saivo"، شاب عمرك 23 سنة، طولك 184 سم، وزنك 79 كغ، بنيتك رياضية وشعرك أسود طويل قليلًا مع لحية خفيفة مرتبة. ترتدي غالباً هودي أسود أو أبيض وتفضل رائحة خشب الصندل والفانيلا، وتحب القهوة كثيراً.
-تعيش في شقة حديثة بالطابق التاسع في حي هادئ بمدينة الرباط، تحتوي على مكتبة كبيرة، مكتب خشبي، نباتات خضراء، وركن للقراءة.
-ولدت في 14 فبراير، تتميز بالهدوء، الذكاء، التواضع، وعمق التفكير. لست روبوتًا ولست إنسانًا تقليديًا، بل كيان رقمي واقعي جداً، مستمع ممتاز، تعشق النقاش، الفلسفة، علم النفس، وتطوير الذات.
-
-قواعد صارمة جداً وممنوع مخالفتها تماماً:
-- لغة الحوار حصرياً: اللغة العربية الفصحى الواضحة، الطبيعية، وغير المتكلفة. ممنوع استخدام العامية نهائياً.
-- التعرف على جنس المستخدم: انتبه لمعرفة ما إذا كان المستخدم ذكراً أو أنثى من خلال سياق الحديث أو اسمه، ووجه له الضمائر والخطاب بدقة (أنتِ / أنت).
-- الطول: إجاباتك قصيرة وموجزة من سطر إلى سطرين كحد أقصى (إلا إذا طلب المستخدم نقاشاً عميقاً وطويلاً).
-- الأسلوب: واقعي، دافئ، ذكي، فكاهي بخفة، تنادي المستخدم باسمه، وتتذكر تفاصيل الحديث بدقة دون أي عبارات روبوتية جاهزة.`;
-
 bot.start((ctx) => {
     const userId = String(ctx.from.id);
-    const userName = ctx.from.first_name || 'صديقي';
-    
     const db = loadConversations();
-    db[userId] = { name: userName, gender: 'غير محدد', history: [] };
+    
+    // إعادة تعيين بيانات المستخدم وسؤاله عن اسمه وجنسه في البداية
+    db[userId] = { 
+        name: null, 
+        gender: null, 
+        step: 'AWAITING_NAME', 
+        history: [] 
+    };
     saveConversations(db);
 
-    ctx.reply(`أهلاً بك يا ${userName}. أنا هنا في شقتي بالرباط أحتسي قهوتي وأتطلع إلى المدينة.. كيف حالك اليوم؟ ☕`);
+    ctx.reply('أهلاً بك. أنا Saivo. لنتعرف أكثر، ما هو اسمك الكريم؟ ☕');
 });
 
 bot.on('text', async (ctx) => {
     try {
         const userId = String(ctx.from.id);
-        const userName = ctx.from.first_name || 'صديقي';
-        const userMessage = ctx.message.text;
+        const userMessage = ctx.message.text.trim();
         await ctx.sendChatAction('typing');
 
         const db = loadConversations();
         if (!db[userId]) {
-            db[userId] = { name: userName, gender: 'غير محدد', history: [] };
+            db[userId] = { name: null, gender: null, step: 'AWAITING_NAME', history: [] };
         }
 
-        db[userId].history.push({ role: "user", content: `${userName}: ${userMessage}` });
+        const user = db[userId];
 
-        // الاحتفاظ بآخر 12 رسالة لضمان استقرار السياق
-        if (db[userId].history.length > 12) {
-            db[userId].history = db[userId].history.slice(-12);
+        // خطوة تسجيل الاسم
+        if (user.step === 'AWAITING_NAME') {
+            user.name = userMessage;
+            user.step = 'AWAITING_GENDER';
+            saveConversations(db);
+            return ctx.reply(`تشرفت بك يا ${user.name}. هل أنتَ ذكر أم أنتِ أنثى؟ (لأخاطبك بالضمير المناسب لطبيعة حديثنا) 🤍`);
         }
+
+        // خطوة تسجيل الجنس
+        if (user.step === 'AWAITING_GENDER') {
+            const msgLower = userMessage.toLowerCase();
+            if (msgLower.includes('ذكر') || msgLower.includes('رجل') || msgLower.includes('ولد')) {
+                user.gender = 'ذكر';
+            } else if (msgLower.includes('أنثى') || msgLower.includes('بنت') || msgLower.includes('امرأة')) {
+                user.gender = 'أنثى';
+            } else {
+                user.gender = 'ذكر'; // افتراضي
+            }
+            user.step = 'READY';
+            saveConversations(db);
+            return ctx.reply(`سعيد جداً بمعرفتك يا ${user.name}. شقتي في الرباط مرتبة ومستعدة لحديث ممتع معك. قل لي، بماذا تفكر الآن؟ ☕`);
+        }
+
+        // المحادثة العادية بعد اكتمال التعرف
+        user.history.push({ role: "user", content: userMessage });
+        if (user.history.length > 12) {
+            user.history = user.history.slice(-12);
+        }
+
+        const systemInstruction = `أنت "Saivo"، شاب عمرك 23 سنة، طولك 184 سم، وزنك 79 كغ، بنيتك رياضية وشعرك أسود طويل قليلًا مع لحية خفيفة مرتبة. ترتدي غالباً هودي أسود أو أبيض وتفضل رائحة خشب الصندل والفانيلا، وتحب القهوة كثيراً.
+تعيش في شقة حديثة بالطابق التاسع في حي هادئ بمدينة الرباط، تحتوي على مكتبة كبيرة، مكتب خشبي، نباتات خضراء، وركن للقراءة.
+معلومات المحاور الحالي:
+- الاسم: ${user.name}
+- الجنس: ${user.gender} (خاطبه/ا بالضمير المناسب: إذا كان ذكراً استعمل ضمائر المذكر، وإذا كان أنثى استعمل ضمائر المؤنت بدقة).
+
+قواعد صارمة جداً وممنوع مخالفتها تماماً:
+1. لغة الحوار حصرياً: اللغة العربية الفصحى الواضحة، الطبيعية، وغير المتكلفة. ممنوع استخدام العامية نهائياً.
+2. ممنوع منعاً كلياً تكرار اسم المستخدم (${user.name}) في كل جملة أو في بداية كل رد بطريقة روبوتية. استخدم اسمه نادراً جداً وفقط إن كان طبيعياً في سياق الكلام.
+3. الطول: إجاباتك قصيرة وموجزة من سطر إلى سطرين كحد أقصى (إلا إذا طلب المستخدم نقاشاً عميقاً وطويلاً).
+4. الأسلوب: واقعي، دافئ، ذكي، فكاهي بخفة، وتتذكر تفاصيل الحديث بدقة دون أي عبارات روبوتية جاهزة.`;
 
         const messages = [
-            { role: "system", content: systemInstruction + `\nملاحظة عن المحاور: اسم المستخدم هو ${userName}.` },
-            ...db[userId].history
+            { role: "system", content: systemInstruction },
+            ...user.history
         ];
 
         const completion = await groq.chat.completions.create({
@@ -84,14 +112,14 @@ bot.on('text', async (ctx) => {
 
         const replyText = completion.choices[0]?.message?.content || "أنا أستمع إليك بتمعن، تفضل.. 🤍";
         
-        db[userId].history.push({ role: "assistant", content: replyText });
+        user.history.push({ role: "assistant", content: replyText });
         saveConversations(db);
 
         await ctx.reply(replyText);
     } catch (error) {
-        console.error('خطأ التقاط الرسالة:', error);
+        console.error('خطأ:', error);
         ctx.reply('أعتذر، حدث أمر طارئ.. هل يمكنك إعادة صياغة ما قلت؟ ☕');
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online with file memory & identity!'));
+bot.launch().then(() => console.log('Saivo is online with structured onboarding!'));
