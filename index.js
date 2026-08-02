@@ -87,7 +87,7 @@ bot.on('text', async (ctx) => {
 2. الاختصار الشديد: اجعل ردك قصيرًا جداً (جملة واحدة فقط أو سطر واحد) لكي لا تتقطع الكلمات أبداً.
 3. ${nameInstruction}
 4. قدم معلومات ذكية ومفيدة واقترح أفكاراً عندما يطلبها المستخدم، مع إنهاء الرد بسؤال قصير جداً ومفتوح.
-5. استخدام إيموجي خفيف واحد (مثل 🤍).`;
+5. تنوع الإيموجي: استخدم إيموجيز متنوعة ومختلفة في كل مرة (مثل: ✨، 💡، ☕، 🚀، 🎯، 🧠، 💻) أو بدون إيموجي أحياناً، ولا تكرر نفس الإيموجي دائماً.`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -98,10 +98,10 @@ bot.on('text', async (ctx) => {
             messages: messages,
             model: "llama-3.3-70b-versatile",
             max_tokens: 55,
-            temperature: 0.5,
+            temperature: 0.7,
         });
 
-        let replyText = completion.choices[0]?.message?.content || "I'm listening 🤍";
+        let replyText = completion.choices[0]?.message?.content || "I'm listening 💡";
         
         // إزالة أي أحرف صينية أو متداخلة غير مرغوبة نهائياً
         replyText = replyText.replace(/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF\u3400-\u4DBF]/g, '').trim();
