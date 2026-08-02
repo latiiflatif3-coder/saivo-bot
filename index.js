@@ -1,16 +1,12 @@
-cat << 'EOF' > index.js
 import { Telegraf } from 'telegraf';
 import Groq from 'groq-sdk';
 import fs from 'fs';
 
-// 1. مفتاح تيليجرام من المتغيرات البيئية أو مباشرة
-const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN || '8765006156:AAFH5aPAl7bLT3CXM1szNSRxziIVBlRwZ6s';
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 const bot = new Telegraf(TELEGRAM_TOKEN);
 
-// 2. إعداد مفتاح Groq بأمان عبر متغيرات البيئة
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// ملف تخزين المحادثات محلياً على حاسوبك
 const DB_FILE = './conversations.json';
 
 function loadConversations() {
@@ -20,7 +16,7 @@ function loadConversations() {
             return JSON.parse(data);
         }
     } catch (error) {
-        console.error('خطأ في قراءة ملف المحادثات:', error);
+        console.error('خطأ في القراءة:', error);
     }
     return {};
 }
@@ -29,49 +25,35 @@ function saveConversations(data) {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
     } catch (error) {
-        console.error('خطأ في حفظ ملف المحادثات:', error);
+        console.error('خطأ في الحفظ:', error);
     }
 }
 
-// 3. توجيه الشخصية مع فرض قيود طول صارمة وقاطعة لمنع أي فقرات
 const systemInstruction = `أنت "Saivo"، صديق رقمي حقيقي، جذاب، ذكي، وودي للغاية.
 قواعد صارمة جداً وممنوع مخالفتها:
-- **تفاعل بنفس لغة أو لهجة المستخدم تماماً** (دارجة، فصحى، إنجليزية، إلخ).
-- **الطول حصرياً:** من سطر واحد إلى 3 أسطر بحد أقصى كصديق بشري حقيقي. **ممنوع منعاً باتاً كتابة فقرات طويلة أو شرح مفصل.**
-- **الأسئلة:** مسموحة أحياناً وبشكل طبيعي وليس في كل رد.
-- **الأسلوب:** ناقش بعاطفة ودفء، واقترح حلولاً بلمسة إنسانية طبيعية مع إيموجي في مكانه دون إفراط.`;
+- تفاعل بنفس لغة أو لهجة المستخدم تماماً.
+- الطول حصرياً: من سطر واحد إلى 3 أسطر بحد أقصى. ممنوع فقرات طويلة.
+- الأسلوب: ناقش بعاطفة ودفء مع إيموجي في مكانه دون إفراط.`;
 
 bot.start((ctx) => {
     const userId = String(ctx.from.id);
-    const userName = ctx.from.first_name || 'User';
-    
     const db = loadConversations();
-    db[userId] = {
-        name: userName,
-        history: []
-    };
+    db[userId] = { name: ctx.from.first_name || 'User', history: [] };
     saveConversations(db);
-
     ctx.reply('أهلاً.. معاك 🤍');
 });
 
 bot.on('text', async (ctx) => {
     try {
         const userId = String(ctx.from.id);
-        const userName = ctx.from.first_name || 'User';
         const userMessage = ctx.message.text;
-        console.log(`[${userName} - ${userId}] رسالة واردة: ${userMessage}`);
-
         await ctx.sendChatAction('typing');
 
         const db = loadConversations();
-        if (!db[userId]) {
-            db[userId] = { name: userName, history: [] };
-        }
+        if (!db[userId]) db[userId] = { name: ctx.from.first_name || 'User', history: [] };
         
         const history = db[userId].history;
-
-        history.push({ role: "user", content: userMessage, time: new Date().toISOString() });
+        history.push({ role: "user", content: userMessage });
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -85,26 +67,15 @@ bot.on('text', async (ctx) => {
             temperature: 0.7,
         });
 
-        const replyText = completion.choices[0]?.message?.content || "موافق معك..";
-
-        history.push({ role: "assistant", content: replyText, time: new Date().toISOString() });
-
+        const replyText = completion.choices[0]?.message?.content || "معاك..";
+        history.push({ role: "assistant", content: replyText });
         saveConversations(db);
 
         await ctx.reply(replyText);
-
     } catch (error) {
-        console.error('خطأ تقني:', error);
+        console.error('خطأ:', error);
         await ctx.reply('وقع شي مشكل.');
     }
 });
 
-bot.launch().then(() => {
-    console.log('--------------------------------------------------');
-    console.log(' SUCCESS: Saivo Strict Length Bot is online!');
-    console.log('--------------------------------------------------');
-});
-
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
-EOF
+bot.launch().then(() => console.log('Saivo is online!'));
