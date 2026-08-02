@@ -11,7 +11,6 @@ if (!TELEGRAM_TOKEN) {
 const bot = new Telegraf(TELEGRAM_TOKEN);
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// إعداد خادم Express لإبقاء المنفذ (Port) مفتوحاً دائماً وترضاء منصة Railway
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -23,7 +22,6 @@ app.listen(PORT, () => {
     console.log(`Web server is listening on port ${PORT}`);
 });
 
-// ذاكرة مؤقتة للمحادثات
 const memory = {};
 
 function guessGenderFromName(name) {
@@ -107,14 +105,18 @@ bot.on('text', async (ctx) => {
 
         await ctx.reply(replyText);
     } catch (error) {
-        console.error('خطأ:', error);
-        ctx.reply('حدث خطأ بسيط، أعد صياغة ما قلت لنتابع حديثنا الممتع ☕');
+        console.error('خطأ في المعالجة:', error);
     }
+});
+
+// التقاط أي أخطاء غير متوقعة لمنع انهيار التطبيق
+bot.catch((err, ctx) => {
+    console.error(`Telegraf Error for ${ctx.updateType}:`, err);
 });
 
 // إطلاق البوت
 bot.launch().then(() => {
-    console.log('Saivo Telegram Bot is running successfully alongside Express!');
+    console.log('Saivo Telegram Bot is running successfully!');
 }).catch(err => {
     console.error('Failed to launch bot:', err);
 });
