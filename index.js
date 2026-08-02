@@ -109,7 +109,7 @@ bot.on('text', async (ctx) => {
 
         let replyText = completion.choices[0]?.message?.content || "أنا أسمعك بتمعن.. أخبرني المزيد عن أفكارك 🤍";
         
-        // تنظيف لضمان خلو النص من أي حروف غريبة
+        // تنظيف النصوص لضمان خلوها من أي رموز غريبة
         replyText = replyText.replace(/[\u1100-\u11FF\u3130-\u318F\uAC00-\uD7AF\u4E00-\u9FFF]/g, '');
 
         user.history.push({ role: "assistant", content: replyText });
@@ -122,4 +122,4 @@ bot.on('text', async (ctx) => {
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online with deep engagement and natural naming!'));
+bot.launch().then(() => console.log('Saivo is online with full identity, persistent JSON memory, and deep engagement!'));
