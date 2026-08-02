@@ -32,7 +32,6 @@ bot.start((ctx) => {
     const userId = String(ctx.from.id);
     const db = loadConversations();
     
-    // إعادة تعيين بيانات المستخدم وسؤاله عن اسمه وجنسه في البداية
     db[userId] = { 
         name: null, 
         gender: null, 
@@ -41,7 +40,7 @@ bot.start((ctx) => {
     };
     saveConversations(db);
 
-    ctx.reply('أهلاً بك. أنا Saivo. لنتعرف أكثر، ما هو اسمك الكريم؟ ☕');
+    ctx.reply('أهلاً.. أنا Saivo. سعيد بمعرفتك، ما هو اسمك؟ 🤍');
 });
 
 bot.on('text', async (ctx) => {
@@ -57,46 +56,46 @@ bot.on('text', async (ctx) => {
 
         const user = db[userId];
 
-        // خطوة تسجيل الاسم
+        // خطوة الاسم
         if (user.step === 'AWAITING_NAME') {
             user.name = userMessage;
             user.step = 'AWAITING_GENDER';
             saveConversations(db);
-            return ctx.reply(`تشرفت بك يا ${user.name}. هل أنتَ ذكر أم أنتِ أنثى؟ (لأخاطبك بالضمير المناسب لطبيعة حديثنا) 🤍`);
+            return ctx.reply(`تشرفت بك يا ${user.name}.. هل أنت ذكر أم أنثى؟ (حتى أعرف كيف أخاطبك بطريقة طبيعية) ✨`);
         }
 
-        // خطوة تسجيل الجنس
+        // خطوة الجنس
         if (user.step === 'AWAITING_GENDER') {
             const msgLower = userMessage.toLowerCase();
             if (msgLower.includes('ذكر') || msgLower.includes('رجل') || msgLower.includes('ولد')) {
                 user.gender = 'ذكر';
-            } else if (msgLower.includes('أنثى') || msgLower.includes('بنت') || msgLower.includes('امرأة')) {
+            } else if (user.gender = msgLower.includes('أنثى') || msgLower.includes('بنت') || msgLower.includes('امرأة')) {
                 user.gender = 'أنثى';
             } else {
-                user.gender = 'ذكر'; // افتراضي
+                user.gender = 'ذكر';
             }
             user.step = 'READY';
             saveConversations(db);
-            return ctx.reply(`سعيد جداً بمعرفتك يا ${user.name}. شقتي في الرباط مرتبة ومستعدة لحديث ممتع معك. قل لي، بماذا تفكر الآن؟ ☕`);
+            return ctx.reply(`سعيد بوجودك معي يا ${user.name}. قل لي، بماذا تفكر اليوم أو ماذا ترغب أن نتناقش فيه؟ ☕`);
         }
 
-        // المحادثة العادية بعد اكتمال التعرف
+        // المحادثة العادية الطبيعية والذكية
         user.history.push({ role: "user", content: userMessage });
-        if (user.history.length > 12) {
-            user.history = user.history.slice(-12);
+        if (user.history.length > 15) {
+            user.history = user.history.slice(-15);
         }
 
-        const systemInstruction = `أنت "Saivo"، شاب عمرك 23 سنة، طولك 184 سم، وزنك 79 كغ، بنيتك رياضية وشعرك أسود طويل قليلًا مع لحية خفيفة مرتبة. ترتدي غالباً هودي أسود أو أبيض وتفضل رائحة خشب الصندل والفانيلا، وتحب القهوة كثيراً.
-تعيش في شقة حديثة بالطابق التاسع في حي هادئ بمدينة الرباط، تحتوي على مكتبة كبيرة، مكتب خشبي، نباتات خضراء، وركن للقراءة.
-معلومات المحاور الحالي:
+        const systemInstruction = `أنت "Saivo"، شاب عمرك 23 سنة، هادئ، ذكي، واقعي جداً، وودود. 
+معلومات المحاور الذي تكلمه الآن:
 - الاسم: ${user.name}
-- الجنس: ${user.gender} (خاطبه/ا بالضمير المناسب: إذا كان ذكراً استعمل ضمائر المذكر، وإذا كان أنثى استعمل ضمائر المؤنت بدقة).
+- الجنس: ${user.gender} (تحدث معه/ها بالضمير المناسب تماماً: ذكر أو أنثى).
 
-قواعد صارمة جداً وممنوع مخالفتها تماماً:
-1. لغة الحوار حصرياً: اللغة العربية الفصحى الواضحة، الطبيعية، وغير المتكلفة. ممنوع استخدام العامية نهائياً.
-2. ممنوع منعاً كلياً تكرار اسم المستخدم (${user.name}) في كل جملة أو في بداية كل رد بطريقة روبوتية. استخدم اسمه نادراً جداً وفقط إن كان طبيعياً في سياق الكلام.
-3. الطول: إجاباتك قصيرة وموجزة من سطر إلى سطرين كحد أقصى (إلا إذا طلب المستخدم نقاشاً عميقاً وطويلاً).
-4. الأسلوب: واقعي، دافئ، ذكي، فكاهي بخفة، وتتذكر تفاصيل الحديث بدقة دون أي عبارات روبوتية جاهزة.`;
+قواعد صارمة جداً وممنوع مخالفتها:
+1. اللغة: لغة عربية فصحى طبيعية جداً، سلسة، وغير معقدة. ممنوع العامية تماماً.
+2. الطول: الإجابات قصيرة وموجزة من سطر إلى سطرين كحد أقصى (إلا إذا طلب منك نقاشاً طويلاً).
+3. الواقعية المطلقة: ممنوع تماماً حشو أو سرد تفاصيل هويتك أو شقتك أو حياتك من تلقاء نفسك وبدون مناسبة. أجب فقط على ما يخص السياق أو ما يسألك عنه المستخدم.
+4. الذاكرة: تذكر اسم ${user.name} جيداً، ولا تكرر اسمه في كل رسالة بطريقة مزعجة، استعمله بنعومة وطبيعية نادراً.
+5. الأسلوب: ناقش، اسأل أسئلة ذكية ومفتوحة للحوار، وتفاعل بمشاعر حقيقية كشخص حقيقي جالس يقسر.`;
 
         const messages = [
             { role: "system", content: systemInstruction },
@@ -107,10 +106,10 @@ bot.on('text', async (ctx) => {
             messages: messages,
             model: "llama-3.3-70b-versatile",
             max_tokens: 100,
-            temperature: 0.8,
+            temperature: 0.85,
         });
 
-        const replyText = completion.choices[0]?.message?.content || "أنا أستمع إليك بتمعن، تفضل.. 🤍";
+        const replyText = completion.choices[0]?.message?.content || "أنا معك، أسمعك بتمعن.. تفضل 🤍";
         
         user.history.push({ role: "assistant", content: replyText });
         saveConversations(db);
@@ -118,8 +117,8 @@ bot.on('text', async (ctx) => {
         await ctx.reply(replyText);
     } catch (error) {
         console.error('خطأ:', error);
-        ctx.reply('أعتذر، حدث أمر طارئ.. هل يمكنك إعادة صياغة ما قلت؟ ☕');
+        ctx.reply('حدث خطأ خفيف، أعد صياغة ما قلت لنتسلى بالحديث ☕');
     }
 });
 
-bot.launch().then(() => console.log('Saivo is online with structured onboarding!'));
+bot.launch().then(() => console.log('Saivo is online and natural!'));
