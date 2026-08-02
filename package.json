@@ -7,8 +7,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "express": "^latest",
-    "groq-sdk": "^latest",
-    "telegraf": "^latest"
+    "telegraf": "^4.16.3",
+    "groq-sdk": "^0.7.0"
   }
 }
